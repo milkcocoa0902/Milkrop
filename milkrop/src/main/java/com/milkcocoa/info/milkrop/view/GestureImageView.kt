@@ -249,7 +249,8 @@ class GestureImageView: androidx.appcompat.widget.AppCompatImageView, ImageListe
                     .coerceIn(minScale, maxScale)
                     .div(currentScaleFactor)
 
-            currentScaleFactor *= limitedScaleFactor
+            // safe from exceed limit, like 3.5000002(calc error)
+            currentScaleFactor = currentScaleFactor.times(limitedScaleFactor).coerceIn(minScale, maxScale)
 
             bmpMatrix.postScale(
                 limitedScaleFactor,

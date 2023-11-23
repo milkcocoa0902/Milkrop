@@ -17,7 +17,7 @@ object MathExtension {
 
 
     fun<T: Number> Float.rangeIn(min: T, max: T): Boolean{
-        return min.toDouble() <= this.toDouble() && this <= max.toDouble()
+        return min.toDouble() <= this && this <= max.toDouble()
     }
     fun<T: Number> Float.rangeOut(min: T, max: T): Boolean = rangeIn(min, max).not()
 
