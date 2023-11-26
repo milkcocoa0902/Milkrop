@@ -8,6 +8,9 @@ import android.net.Uri
 import android.util.AttributeSet
 import android.view.ViewGroup
 import android.widget.FrameLayout
+import com.milkcocoa.info.milkrop.util.MathExtension.minus
+import kotlin.math.abs
+import kotlin.math.min
 
 /**
  * CropImageView
@@ -49,32 +52,65 @@ class CropImageView: FrameLayout {
 
                 override fun onRelease(view: GestureImageView) {
                     val edge = view.currentBitmapBounds()
+                    val center = view.currentBitmapCenter()
 
+
+                    var dx = 0f
+                    var dy = 0f
                     maskView.cropWindow()?.let { cropWindow ->
+                        currentAngle().mod(90f).takeIf { it == 0f }?.let {
+                            // 現在の角度が90度単位（つまり、縦や横きっちり）の場合
+                            val scaleFactor = min(
+                                edge.height().toFloat().div(cropWindow.height()),
+                                edge.width().toFloat().div(cropWindow.width())
+                            )
 
-                        var dx = 0f
-                        var dy = 0f
+                            val windowCenter = PointF(
+                                cropWindow.centerX(),
+                                cropWindow.centerY()
+                            )
 
-                        if(edge.bottom < cropWindow.bottom){
-                            dy += -(edge.bottom - cropWindow.bottom)
+
+                            if(scaleFactor < 1.0){
+                                // 中心に移動して拡大する
+                                windowCenter.minus(center).let {
+                                    view.zoom(1.1f.div(scaleFactor), currentBitmapCenter(), true)
+                                    view.translate(
+                                        it.x,
+                                        it.y,
+                                        true
+                                    )
+                                }
+                            }else{
+                                // 単に移動する
+
+                                if(edge.bottom < cropWindow.bottom){
+                                    dy += cropWindow.bottom - edge.bottom
+                                }
+
+                                if(edge.top > cropWindow.top){
+                                    dy += cropWindow.top - edge.top
+                                }
+
+                                if(edge.left > cropWindow.left){
+                                    dx += cropWindow.left - edge.left
+                                }
+
+                                if(edge.right < cropWindow.right){
+                                    dx += cropWindow.right - edge.right
+                                }
+
+                                view.translate(
+                                    dx = dx.div(1.0f),
+                                    dy = dy.div(1.0f),
+                                    animation = true
+                                )
+                            }
+                        } ?: kotlin.run {
+                            // テント直線の距離もとめてなんやかんや
+
+
                         }
-
-                        if(edge.top > cropWindow.top){
-                            dy += -(edge.top - cropWindow.top)
-                        }
-
-                        if(edge.left > cropWindow.left){
-                            dx += -(edge.left - cropWindow.left)
-                        }
-                        if(edge.right < cropWindow.right){
-                            dx += -(edge.right - cropWindow.right)
-                        }
-
-                        view.translate(
-                            dx = dx.div(1.0f),
-                            dy = dy.div(1.0f),
-                            animation = false
-                        )
                     }
 
                 }
