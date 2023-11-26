@@ -8,7 +8,6 @@ import android.net.Uri
 import android.util.AttributeSet
 import android.view.ViewGroup
 import android.widget.FrameLayout
-import com.milkcocoa.info.milkrop.R
 
 /**
  * CropImageView
@@ -49,9 +48,6 @@ class CropImageView: FrameLayout {
                 }
 
                 override fun onRelease(view: GestureImageView) {
-                    val pivot = view.currentBitmapCenter()
-                    val factor = view.currentScale()
-                    val size = view.getBitmapSize()
                     val edge = view.currentBitmapBounds()
 
                     maskView.cropWindow()?.let { cropWindow ->

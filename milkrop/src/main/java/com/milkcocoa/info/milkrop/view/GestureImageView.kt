@@ -9,6 +9,7 @@ import android.graphics.RectF
 import android.net.Uri
 import android.util.AttributeSet
 import android.util.Log
+import android.util.Size
 import android.util.SizeF
 import android.view.MotionEvent
 import android.view.animation.AccelerateDecelerateInterpolator
@@ -26,6 +27,7 @@ import com.milkcocoa.info.milkrop.util.MathExtension.plus
 import com.milkcocoa.info.milkrop.util.MathExtension.rangeOut
 import com.milkcocoa.info.milkrop.util.MathExtension.times
 import com.milkcocoa.info.milkrop.util.MatrixExtension.get
+import com.milkcocoa.info.milkrop.util.RectUtils
 import kotlin.math.atan2
 import kotlin.math.min
 import kotlin.math.pow
@@ -50,6 +52,10 @@ class GestureImageView: androidx.appcompat.widget.AppCompatImageView {
     companion object{
         private const val TAG = "GestureImageView"
         private const val EPS = 1e-4
+
+        private const val RECT_CORNER_POINTS_COORDS = 8
+        private const val RECT_CENTER_POINT_COORDS = 2
+        private const val MATRIX_VALUES_COUNT = 9
     }
 
     constructor(context: Context): super(context)
@@ -86,10 +92,13 @@ class GestureImageView: androidx.appcompat.widget.AppCompatImageView {
         ) * (180.0 / Math.PI)).unaryMinus().toFloat()
     }
 
+    private var initialImageRect: RectF = RectF()
+    private var initialImageCenter = FloatArray(RECT_CENTER_POINT_COORDS)
+    private var initialImageCorner = FloatArray(RECT_CORNER_POINTS_COORDS)
+    private val currentImageCenter = FloatArray(RECT_CENTER_POINT_COORDS)
+    private val currentImageCorner = FloatArray(RECT_CORNER_POINTS_COORDS)
 
 
-    private var size: SizeF = SizeF(0f, 0f)
-    public fun getBitmapSize() = size
 
 
     private var imageUri: Uri? = null
@@ -97,10 +106,11 @@ class GestureImageView: androidx.appcompat.widget.AppCompatImageView {
     private val currentImageMatrix = Matrix()
 
 
+    private var bitmapSampleCount = 1
 
 
     fun currentAngle() = getMatrixAngle(currentImageMatrix)
-    fun currentScale() = getMatrixScale(currentImageMatrix)
+    fun currentBitmapScale() = getMatrixScale(currentImageMatrix).div(1)
 
 
     fun currentTranslate(): DistanceF{
@@ -114,26 +124,14 @@ class GestureImageView: androidx.appcompat.widget.AppCompatImageView {
     }
 
     fun currentBitmapCenter(): PointF{
-        val sz = getBitmapSize().times(0.5f)
-        val translate = currentTranslate()
-        val factor = currentScale()
-
-        return PointF(x, y)
-            .plus(translate)
-            .plus(sz.times(factor).let { DistanceF(it.width, it.height) })
-
+        return PointF(
+            currentImageCenter[0],
+            currentImageCenter[1]
+        )
     }
 
     fun currentBitmapBounds(): RectF{
-        val scale = currentScale()
-        val translate = currentTranslate()
-
-        return RectF(
-            translate.x,
-            translate.y,
-            translate.x.plus(size.width.times(scale)),
-            translate.y.plus(size.height.times(scale))
-        )
+        return RectUtils.trapToRect(currentImageCorner)
     }
 
 
@@ -143,7 +141,7 @@ class GestureImageView: androidx.appcompat.widget.AppCompatImageView {
         value: Float,
     ){
         _maxScale = value
-        if(currentScale() < _maxScale){
+        if(currentBitmapScale() < _maxScale){
             zoom(maxScale, animation = false)
         }
     }
@@ -156,7 +154,7 @@ class GestureImageView: androidx.appcompat.widget.AppCompatImageView {
         value: Float,
     ){
         _maxScale = value
-        if(currentScale() > _minScale){
+        if(currentBitmapScale() > _minScale){
             zoom(_minScale, animation = false)
         }
     }
@@ -278,7 +276,7 @@ class GestureImageView: androidx.appcompat.widget.AppCompatImageView {
         pivot: PointF,
         animation: Boolean,
     ){
-        if(currentScale().rangeOut(minScale, maxScale, EPS)){
+        if(currentBitmapScale().rangeOut(minScale, maxScale, EPS)){
             return
         }
 
@@ -288,8 +286,8 @@ class GestureImageView: androidx.appcompat.widget.AppCompatImageView {
             val duration = 250L
 
 
-            val targetScaleFactor = (currentScale() * scaleFactor).coerceIn(minScale, maxScale)
-            val initialScaleFactor = currentScale()
+            val targetScaleFactor = (currentBitmapScale() * scaleFactor).coerceIn(minScale, maxScale)
+            val initialScaleFactor = currentBitmapScale()
             var lastScaleFactor = initialScaleFactor
 
 
@@ -325,7 +323,7 @@ class GestureImageView: androidx.appcompat.widget.AppCompatImageView {
                             imageMatrix = currentImageMatrix
                             listener?.onScale(
                                 view = this@GestureImageView,
-                                scaleFactor = currentScale()
+                                scaleFactor = currentBitmapScale()
                             )
 
                         }
@@ -334,9 +332,9 @@ class GestureImageView: androidx.appcompat.widget.AppCompatImageView {
             })
         }else{
             val limitedScaleFactor =
-                currentScale().times(scaleFactor)
+                currentBitmapScale().times(scaleFactor)
                     .coerceIn(minScale, maxScale)
-                    .div(currentScale())
+                    .div(currentBitmapScale())
 
             currentImageMatrix.postScale(
                 limitedScaleFactor,
@@ -349,7 +347,7 @@ class GestureImageView: androidx.appcompat.widget.AppCompatImageView {
 
             listener?.onScale(
                 view = this@GestureImageView,
-                scaleFactor = currentScale()
+                scaleFactor = currentBitmapScale()
             )
         }
     }
@@ -476,6 +474,7 @@ class GestureImageView: androidx.appcompat.widget.AppCompatImageView {
         bitmapDecoded = true
         bitmapLaidOut = false
         setImageDrawable(FastBitmapDrawable(bm))
+        requestLayout()
     }
 
     fun setImageUri(imageUri: Uri){
@@ -495,12 +494,17 @@ class GestureImageView: androidx.appcompat.widget.AppCompatImageView {
                 Log.d("ERROR", "ERROR!!!", e)
             }
 
-            override suspend fun onLoad(bitmap: Bitmap) {
+            override suspend fun onLoad(bitmap: Bitmap, sampleCount: Int) {
                 bitmapDecoded = true
                 bitmapLaidOut = false
+                bitmapSampleCount = sampleCount
                 setImageDrawable(FastBitmapDrawable(bitmap))
+                requestLayout()
             }
-        })
+        }){
+            downSample = true
+            maxSize = Size(640, 480)
+        }
     }
 
 
@@ -511,19 +515,20 @@ class GestureImageView: androidx.appcompat.widget.AppCompatImageView {
         val w = drawable.intrinsicWidth
         val h = drawable.intrinsicHeight
 
-
-        size = SizeF(w.toFloat(), h.toFloat())
+        initialImageRect = RectF(0f, 0f, w.toFloat(), h.toFloat())
+        initialImageCenter = RectUtils.getCenterFromRect(initialImageRect)
+        initialImageCorner = RectUtils.getCornersFromRect(initialImageRect)
 
         val scaleFactor = min(
             width.toFloat().div(w),
             height.toFloat().div(h)
         )
-        val xOffset = (width.toFloat() - w * scaleFactor) / 2
-        val yOffset = (height.toFloat() - h * scaleFactor) / 2
 
 
         zoom(scaleFactor, PointF(0f, 0f), animation = false)
 
+        val xOffset = (width.toFloat() - w * currentBitmapScale()) / 2
+        val yOffset = (height.toFloat() - h * currentBitmapScale()) / 2
         translate(
             xOffset,
             yOffset,
@@ -532,11 +537,16 @@ class GestureImageView: androidx.appcompat.widget.AppCompatImageView {
 
         bitmapLaidOut = true
 
-        Log.i(TAG, "image loaded with size [$w] x [$h]")
-        Log.i(TAG, "image put on ${currentBitmapCenter()} with bounds ${currentBitmapBounds()} which scaled by ${currentScale()}")
+        currentImageMatrix.mapPoints(currentImageCenter, initialImageCenter)
+        currentImageMatrix.mapPoints(currentImageCorner, initialImageCorner)
 
         state = LoadingState.COMPLETE
+
+        Log.i(TAG, "image loaded with size [$w] x [$h]")
+        Log.i(TAG, "image put on ${currentBitmapCenter()} with bounds ${currentBitmapBounds()} which scaled by ${currentBitmapScale()}")
+
         listener?.onLoadComplete()
+
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -545,7 +555,9 @@ class GestureImageView: androidx.appcompat.widget.AppCompatImageView {
         imageMatrix = currentImageMatrix
 
 
-        println("scale: $scaleX, translate: ${currentTranslate()}, scale: ${currentScale()}, pivot: ${currentBitmapCenter()}")
+
+        currentImageMatrix.mapPoints(currentImageCenter, initialImageCenter)
+        currentImageMatrix.mapPoints(currentImageCorner, initialImageCorner)
     }
 
     override fun setScaleType(scaleType: ScaleType?) {
@@ -561,6 +573,11 @@ class GestureImageView: androidx.appcompat.widget.AppCompatImageView {
     private fun reset(){
         scaleType = ScaleType.MATRIX
 
+        initialImageCenter = FloatArray(RECT_CENTER_POINT_COORDS)
+        initialImageCorner = FloatArray(RECT_CENTER_POINT_COORDS)
+        initialImageRect = RectF()
+
+
         currentImageMatrix.reset()
 
         rotationDetector.reset()
@@ -573,6 +590,7 @@ class GestureImageView: androidx.appcompat.widget.AppCompatImageView {
         state = LoadingState.NO_SOURCE
         imageUri = null
         super.setImageResource(0)
+        bitmapSampleCount = 1
 
         reset()
     }
