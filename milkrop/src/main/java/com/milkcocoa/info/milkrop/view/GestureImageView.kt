@@ -53,6 +53,8 @@ class GestureImageView: androidx.appcompat.widget.AppCompatImageView {
         private const val TAG = "GestureImageView"
         private const val EPS = 1e-4
 
+        private const val ANIMATION_DURATION_MILLIS = 150L
+
         private const val RECT_CORNER_POINTS_COORDS = 8
         private const val RECT_CENTER_POINT_COORDS = 2
         private const val MATRIX_VALUES_COUNT = 9
@@ -112,14 +114,16 @@ class GestureImageView: androidx.appcompat.widget.AppCompatImageView {
     fun currentAngle() = getMatrixAngle(currentImageMatrix)
     fun currentBitmapScale() = getMatrixScale(currentImageMatrix).div(1)
 
+    fun initialBitmapCenter() = PointF(
+        initialImageCenter[0],
+        initialImageCenter[1]
+    )
 
     fun currentTranslate(): DistanceF{
-        val v = FloatArray(9)
-        currentImageMatrix.getValues(v)
 
         return DistanceF(
-            v[Matrix.MTRANS_X],
-            v[Matrix.MTRANS_Y]
+            currentImageMatrix.get(Matrix.MTRANS_X),
+            currentImageMatrix.get(Matrix.MTRANS_Y)
         )
     }
 
@@ -283,7 +287,6 @@ class GestureImageView: androidx.appcompat.widget.AppCompatImageView {
         if(animation){
             val interpolator = AccelerateDecelerateInterpolator()
             val startTime = System.currentTimeMillis()
-            val duration = 250L
 
 
             val targetScaleFactor = (currentBitmapScale() * scaleFactor).coerceIn(minScale, maxScale)
@@ -295,7 +298,8 @@ class GestureImageView: androidx.appcompat.widget.AppCompatImageView {
 
             post(object: Runnable{
                 override fun run() {
-                    val t = (System.currentTimeMillis() - startTime).toFloat().div(duration).coerceAtMost(1.0f)
+                    val t = (System.currentTimeMillis() - startTime).toFloat().div(
+                        ANIMATION_DURATION_MILLIS).coerceAtMost(1.0f)
 
                     val interpolatorRatio = interpolator.getInterpolation(t)
                     val tmpScaleFactor = (initialScaleFactor + interpolatorRatio.times(targetScaleFactor - initialScaleFactor)).let {
@@ -357,15 +361,14 @@ class GestureImageView: androidx.appcompat.widget.AppCompatImageView {
         if(animation){
             val interpolator = AccelerateDecelerateInterpolator()
             val startTime = System.currentTimeMillis()
-            val duration = 250L
-
             var totalTranslationX = 0f
             var totalTranslationY = 0f
 
 
             post(object: Runnable{
                 override fun run() {
-                    val t = (System.currentTimeMillis() - startTime).toFloat().div(duration).coerceAtMost(1.0f)
+                    val t = (System.currentTimeMillis() - startTime).toFloat().div(
+                        ANIMATION_DURATION_MILLIS).coerceAtMost(1.0f)
 
                     val interpolatorRatio = interpolator.getInterpolation(t)
                     val tmpTranslationX = interpolatorRatio.times(dx) - totalTranslationX
