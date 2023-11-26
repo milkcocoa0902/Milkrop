@@ -35,6 +35,7 @@ class CropImageView: FrameLayout {
             setAspectRatio(CropMaskView.AspectRatio(4f, 3f))
         }
         gestureImageView = GestureImageView(context).apply {
+            setBackgroundColor(Color.parseColor("#666666"))
             setListener(object: GestureListener{
                 override fun onRotate(view: GestureImageView, rotation: Float) {
                 }
