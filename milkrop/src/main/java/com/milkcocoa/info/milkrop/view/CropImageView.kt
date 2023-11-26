@@ -1,12 +1,14 @@
 package com.milkcocoa.info.milkrop.view
 
 import android.content.Context
+import android.graphics.Color
 import android.graphics.PointF
 import android.graphics.RectF
 import android.net.Uri
 import android.util.AttributeSet
 import android.view.ViewGroup
 import android.widget.FrameLayout
+import com.milkcocoa.info.milkrop.R
 
 /**
  * CropImageView
@@ -50,7 +52,7 @@ class CropImageView: FrameLayout {
                     val pivot = view.currentBitmapCenter()
                     val factor = view.currentScale()
                     val size = view.getBitmapSize()
-                    val edge = view.currentBitmapCorners()
+                    val edge = view.currentBitmapBounds()
 
                     maskView.cropWindow()?.let { cropWindow ->
 
@@ -78,6 +80,10 @@ class CropImageView: FrameLayout {
                             animation = false
                         )
                     }
+
+                }
+
+                override fun onLoadComplete() {
 
                 }
             })
