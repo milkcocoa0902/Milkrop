@@ -1,6 +1,7 @@
 package com.milkcocoa.info.milkrop.util
 
 import android.graphics.PointF
+import android.graphics.RectF
 import android.util.Size
 import android.util.SizeF
 import com.milkcocoa.info.milkrop.model.DistanceF
