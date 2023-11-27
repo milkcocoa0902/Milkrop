@@ -2,15 +2,18 @@ package com.milkcocoa.info.milkrop.view
 
 import android.content.Context
 import android.graphics.Color
+import android.graphics.Matrix
 import android.graphics.PointF
 import android.graphics.RectF
 import android.net.Uri
 import android.util.AttributeSet
+import android.util.Log
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import com.milkcocoa.info.milkrop.util.MathExtension.minus
 import kotlin.math.abs
 import kotlin.math.min
+import kotlin.math.pow
 
 /**
  * CropImageView
@@ -58,6 +61,15 @@ class CropImageView: FrameLayout {
                     var dx = 0f
                     var dy = 0f
                     maskView.cropWindow()?.let { cropWindow ->
+                        maskView.corners()?.let {
+                            Log.i("DISTANCE", calculateDistance(
+                                p = it.lt,
+                                a = PointF(edge.left, edge.bottom),
+                                b = PointF(edge.left, edge.top)
+                            ).toString())
+                        }
+
+
                         currentAngle().mod(90f).takeIf { it == 0f }?.let {
                             // 現在の角度が90度単位（つまり、縦や横きっちり）の場合
                             val scaleFactor = min(
@@ -122,6 +134,15 @@ class CropImageView: FrameLayout {
         }
         addView(gestureImageView, LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         addView(maskView, LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+    }
 
+    fun calculateDistance(p: PointF, a: PointF, b: PointF): Double{
+        val AB = b.minus(a)
+        val AP = p.minus(a)
+
+        val D = abs(AB.x.toDouble().times(AP.y) - AB.y.toDouble().times(AP.x))
+        val L = AB.length()
+
+        return D.div(L)
     }
 }
