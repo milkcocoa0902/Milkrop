@@ -11,6 +11,7 @@ import android.graphics.RectF
 import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.View
+import com.milkcocoa.info.milkrop.model.CornersF
 
 /**
  * CropMaskView
@@ -41,6 +42,14 @@ class CropMaskView : View {
 
     private var cropWindow: RectF? = null
     fun cropWindow() = cropWindow
+    fun corners() = cropWindow()?.let { cw ->
+        CornersF(
+            lt = PointF(cw.left, cw.top),
+            rt = PointF(cw.right, cw.top),
+            rb = PointF(cw.right, cw.bottom),
+            lb = PointF(cw.left, cw.bottom)
+        )
+    }
 
     override fun draw(canvas: Canvas) {
         super.draw(canvas)
