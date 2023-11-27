@@ -1,16 +1,17 @@
+@Suppress("DSL_SCOPE_VIOLATION") // TODO: Remove once KTIJ-19369 is fixed
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
 }
 
 android {
-    namespace = "com.milkcocoa.info.milkrop"
-    compileSdk = 33
+    namespace = "com.milkcocoa.info.milkrop.sample"
+    compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.milkcocoa.info.milkrop"
+        applicationId = "com.milkcocoa.info.milkrop.sample"
         minSdk = 27
-        targetSdk = 33
+        targetSdk = 34
         versionCode = 1
         versionName = "1.0"
 
@@ -36,6 +37,8 @@ android {
 }
 
 dependencies {
+
+    implementation(project(":milkrop"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
