@@ -120,7 +120,6 @@ class GestureImageView: androidx.appcompat.widget.AppCompatImageView {
     )
 
     fun currentTranslate(): DistanceF{
-
         return DistanceF(
             currentImageMatrix.get(Matrix.MTRANS_X),
             currentImageMatrix.get(Matrix.MTRANS_Y)
@@ -242,6 +241,7 @@ class GestureImageView: androidx.appcompat.widget.AppCompatImageView {
             pivot.y
         )
         imageMatrix = currentImageMatrix
+        updateCurrentPoints()
 
         listener?.onRotate(
             view = this@GestureImageView,
@@ -312,8 +312,8 @@ class GestureImageView: androidx.appcompat.widget.AppCompatImageView {
 
 
                     currentImageMatrix.postScale(tmpScaleFactor, tmpScaleFactor, pivot.x, pivot.y)
-
                     imageMatrix = currentImageMatrix
+                    updateCurrentPoints()
                     if(t < 1.0f){
                         post(this)
                     }else{
@@ -325,6 +325,7 @@ class GestureImageView: androidx.appcompat.widget.AppCompatImageView {
                                 pivot.y
                             )
                             imageMatrix = currentImageMatrix
+                            updateCurrentPoints()
                             listener?.onScale(
                                 view = this@GestureImageView,
                                 scaleFactor = currentBitmapScale()
@@ -347,6 +348,7 @@ class GestureImageView: androidx.appcompat.widget.AppCompatImageView {
                 pivot.y
             )
             imageMatrix = currentImageMatrix
+            updateCurrentPoints()
 
 
             listener?.onScale(
@@ -379,6 +381,7 @@ class GestureImageView: androidx.appcompat.widget.AppCompatImageView {
                     totalTranslationY += tmpTranslationY
 
                     imageMatrix = currentImageMatrix
+                    updateCurrentPoints()
 
                     if(t < 1.0f){
                         post(this)
@@ -392,6 +395,7 @@ class GestureImageView: androidx.appcompat.widget.AppCompatImageView {
                             errorTranslate.y
                         )
                         imageMatrix = currentImageMatrix
+                        updateCurrentPoints()
 
                         listener?.onTranslate(
                             view = this@GestureImageView,
@@ -404,6 +408,7 @@ class GestureImageView: androidx.appcompat.widget.AppCompatImageView {
         }else{
             currentImageMatrix.postTranslate(dx, dy)
             imageMatrix = currentImageMatrix
+            updateCurrentPoints()
             listener?.onTranslate(
                 view = this@GestureImageView,
                 pivot = currentBitmapCenter(),
@@ -506,7 +511,7 @@ class GestureImageView: androidx.appcompat.widget.AppCompatImageView {
             }
         }){
             downSample = true
-            maxSize = Size(640, 480)
+            maxSize = Size(measuredWidth, measuredHeight)
         }
     }
 
@@ -539,9 +544,7 @@ class GestureImageView: androidx.appcompat.widget.AppCompatImageView {
         )
 
         bitmapLaidOut = true
-
-        currentImageMatrix.mapPoints(currentImageCenter, initialImageCenter)
-        currentImageMatrix.mapPoints(currentImageCorner, initialImageCorner)
+        updateCurrentPoints()
 
         state = LoadingState.COMPLETE
 
@@ -558,7 +561,10 @@ class GestureImageView: androidx.appcompat.widget.AppCompatImageView {
         imageMatrix = currentImageMatrix
 
 
+        updateCurrentPoints()
+    }
 
+    private fun updateCurrentPoints(){
         currentImageMatrix.mapPoints(currentImageCenter, initialImageCenter)
         currentImageMatrix.mapPoints(currentImageCorner, initialImageCorner)
     }
